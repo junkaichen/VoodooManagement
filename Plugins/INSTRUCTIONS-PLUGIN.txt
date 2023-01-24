@@ -1,0 +1,39 @@
+
+BLUEPRINT FOR UNREAL ENGINE (5.1.0)
+-------------------------------------------------------------
+
+#1 Select the Zipfile for your correct Engine:
+	- SERIALCOM_4_UE510/SERIALCOM_4UE510.zip (Unreal Engine 5.1.0)
+
+#2 Unzip the correspondent Zip file into your project "Plugins" Folder. If doesn't exist, create one.
+---------->Your_Project_Folder-->
+----------------->Binaries
+----------------->Config
+----------------->Content
+----------------->DerivedDataCache
+----------------->Intermidiate
+----------------->Plugins_
+                          |------>SERIALCOM_EUXXX
+----------------->Saved
+Your_Project.uproject
+
+#3 Activate  "Communication Serial Port (Serial COM)" plugin from your plugin list.
+
+#4 Re-Start your Project. You are ready to use the plugin!!!
+
+
+Enjoy it!
+
+
+https://github.com/videofeedback/Unreal-Engine-Plugin-Communication-Serial-Port/
+
+For support and comments,
+Discord: https://discord.ramiroslab.com
+Github: https://github.reamiroslab.com
+YouTube: https://youtube.ramiroslab.com
+
+Thank you!
+Ramiro Montes De Oca,
+Ramiro's Lab
+
+Updated 12/12//2022
