@@ -5,7 +5,7 @@
 #define SS_PIN D10
 #define RST_PIN D9
 #define SOUND_LIMIT 10000
-#define BUTTON_INTERVAL 300
+#define BUTTON_INTERVAL 150
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
@@ -140,7 +140,7 @@ void loop()
   // previousStateCLK = currentStateCLK;
  
   unsigned long currentTime = millis();
-  if ((button1Read == 1 && button1LastRead == 0)||(button2Read == 1 && button2LastRead == 0))
+  if ((button1Read == 1 && button1LastRead == 0)||(button2Read == 1 && button2LastRead == 0) ||(button3Read == 1 && button3LastRead == 0))
   {
     buttonLastTriggeredTime = millis();
   }
