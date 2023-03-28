@@ -5,15 +5,13 @@
 #define SS_PIN D10
 #define RST_PIN D9
 #define SOUND_LIMIT 10000
-#define BUTTON_INTERVAL 150
+#define BUTTON_INTERVAL 300
 
 MFRC522 rfid(SS_PIN, RST_PIN);
 
 int button1Pin = D2;
 int button2Pin = D3;
 int button3Pin = D4;
-int button4Pin = D5;
-int button5Pin = D6;
 int inputCLK = 4;
 int inputDT = 5;
 
@@ -28,9 +26,7 @@ int previousStateCLK;
 int button1Read, button1LastRead;
 int button2Read, button2LastRead;
 int button3Read, button3LastRead;
-int button4Read, button4LastRead;
-int button5Read, button5LastRead;
-unsigned long buttonLastReleaseTime = 0;
+unsigned long buttonLastTriggeredTime = 0;
 
 bool hasOutPutted;
 
@@ -91,14 +87,10 @@ void setup()
   pinMode(button1Pin, INPUT);
   pinMode(button2Pin, INPUT);
   pinMode(button3Pin, INPUT);
-  pinMode(button4Pin, INPUT);
-  pinMode(button5Pin, INPUT);
 
   button1LastRead = 1;
   button2LastRead = 1;
   button3LastRead = 1;
-  button4LastRead = 1;
-  button5LastRead = 1;
 
   SPI.begin(); // init SPI bus
   rfid.PCD_Init(); // init MFRC522
@@ -114,8 +106,6 @@ void loop()
   button1Read = digitalRead(button1Pin);
   button2Read = digitalRead(button2Pin);
   button3Read = digitalRead(button3Pin);
-  button4Read = digitalRead(button4Pin);
-  button5Read = digitalRead(button5Pin);
 
   // currentStateCLK = digitalRead(inputCLK);
   // if(currentStateCLK != previousStateCLK)
@@ -150,54 +140,40 @@ void loop()
   // previousStateCLK = currentStateCLK;
  
   unsigned long currentTime = millis();
+  if ((button1Read == 1 && button1LastRead == 0)||(button2Read == 1 && button2LastRead == 0))
+  {
+    buttonLastTriggeredTime = millis();
+  }
   
   if(button1Read == 0 && button1LastRead == 1)
   {
-    if (currentTime - buttonLastReleaseTime >= BUTTON_INTERVAL)
+    if (currentTime-buttonLastTriggeredTime >= BUTTON_INTERVAL)
     {
       MyPrintln("Btn1");
+      
     }
   }
 
   if(button2Read == 0 && button2LastRead == 1)
   {
-    if (currentTime-buttonLastReleaseTime >= BUTTON_INTERVAL)
+    if (currentTime-buttonLastTriggeredTime >= BUTTON_INTERVAL)
       MyPrintln("Btn2");
   }
 
   if(button3Read == 0 && button3LastRead == 1)
    {
-    if (currentTime-buttonLastReleaseTime >= BUTTON_INTERVAL)
+    if (currentTime-buttonLastTriggeredTime >= BUTTON_INTERVAL)
       MyPrintln("Btn3");
   }
-
-  if(button4Read == 0 && button4LastRead == 1)
-   {
-    if (currentTime-buttonLastReleaseTime >= BUTTON_INTERVAL)
-      MyPrintln("Btn4");
-  }
-
-  if(button5Read == 0 && button5LastRead == 1)
-   {
-    if (currentTime-buttonLastReleaseTime >= BUTTON_INTERVAL)
-      MyPrintln("Btn5");
-  }
-
-  if ((button1Read == 1 && button1LastRead == 0)||(button2Read == 1 && button2LastRead == 0) ||(button3Read == 1 && button3LastRead == 0) ||(button4Read == 1 && button4LastRead == 0)||(button5Read == 1 && button5LastRead == 0))
-  {
-    buttonLastReleaseTime = millis();
-  }
-
   button1LastRead = button1Read;
   button2LastRead = button2Read;
   button3LastRead = button3Read;
-  button4LastRead = button4Read;
-  button5LastRead = button5Read;
 
   if (rfid.PICC_IsNewCardPresent()) { // new tag is available
-    //Serial.println("New Card!");
     if (rfid.PICC_ReadCardSerial()) { // NUID has been readed
       MFRC522::PICC_Type piccType = rfid.PICC_GetType(rfid.uid.sak);
+      //Serial.print("RFID/NFC Tag Type: ");
+      //Serial.println(rfid.PICC_GetTypeName(piccType));
 
       // print NUID in Serial Monitor in the hex format
       MyPrint("UID ");

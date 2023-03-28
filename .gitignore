@@ -56,8 +56,6 @@ Build/*
 !Build/*/
 Build/*/**
 !Build/*/PakBlacklist*.txt
-!Plugins/*/Source/
-!Plugins/*/Source/**/*.lib
 
 # Don't ignore icon files in Build
 !Build/**/*.ico
