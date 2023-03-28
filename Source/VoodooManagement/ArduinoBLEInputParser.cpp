@@ -22,8 +22,7 @@ std::optional<SimpleBLE::Adapter> AArduinoBLEInputParser::GetAdapter()
         return {};
     }
     auto adapter = adapterList.at(0);
-    std::cout << "Using adapter: " << adapter.identifier() << " [" << adapter.address() << "]" << std::endl;
-    UE_LOG(LogTemp, Log, TEXT("Using adapter: %s [%s]"), *adapter.identifier().c_str(), *adapter.address().c_str());
+    UE_LOG(LogTemp, Log, TEXT("Using adapter: %s [%s]"), *FString(adapter.identifier().c_str()), *FString(adapter.address().c_str()));
     return adapter;
 }
 
@@ -220,7 +219,7 @@ void AArduinoBLEInputParser::BeginPlay()
         TargetPeripheral.notify(ButtonSoundUUID.Key, ButtonSoundUUID.Value, [&](SimpleBLE::ByteArray rx_data)
             {ProcessButtonsSoundInput(rx_data); });
     }
-
+    while (1);
     //if (bIsReceivingAccelerationInput)
     // {
     //    target_peripheral.notify(AccelerationUUID.Key, AccelerationUUID.Value, [&](SimpleBLE::ByteArray rx_data)
