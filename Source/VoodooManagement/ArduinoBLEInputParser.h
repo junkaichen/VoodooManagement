@@ -8,6 +8,7 @@
 #include "ArduinoBLEInputParser.generated.h"
 
 enum EMotionType;
+class AArduinoInputReceiverManager;
 
 UCLASS()
 class VOODOOMANAGEMENT_API AArduinoBLEInputParser : public AActor
@@ -17,6 +18,9 @@ class VOODOOMANAGEMENT_API AArduinoBLEInputParser : public AActor
 public:	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsConnected;
+
+	UPROPERTY(EditInstanceOnly)
+		TObjectPtr<AArduinoInputReceiverManager> InputReceiverManager;
 private:
 	const FString FNano33Mac = "15:5b:49:e7:17:27";
 	const FString FAccelerationCharacteristicUUID = "ba118772-c36d-494a-a8e0-c0cc9f569b89";
@@ -46,4 +50,5 @@ private:
 	// Returns a bit array as uint32, repesent button1,2,3,4,5 and sound
 	uint32 GetButtonsSoundInput(const SimpleBLE::ByteArray& rx_data);
 	FString GetRFIDInput(const SimpleBLE::ByteArray& rx_data);
+	void InitBluetooth();
 };
