@@ -26,79 +26,19 @@ std::optional<SimpleBLE::Adapter> AArduinoBLEInputParser::GetAdapter()
     return adapter;
 }
 
-void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data)
+uint32 AArduinoBLEInputParser::GetButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
 {
-    TEnumAsByte<EMotionType> Type = GetAccelerationSensorInput(rx_data);
-    TArray<AActor*> ArduinoInputReceiverActorArray;
-    UGameplayStatics::GetAllActorsWithInterface(GetWorld(), UArduinoBLEInputInterface::StaticClass(), ArduinoInputReceiverActorArray);
-    for (auto actor : ArduinoInputReceiverActorArray)
-    {
-        TWeakInterfacePtr<IArduinoBLEInputInterface> ArduinoInputReceiverActor = Cast<IArduinoBLEInputInterface>(actor);
-        if (ArduinoInputReceiverActor.IsValid())
-        {
-            ArduinoInputReceiverActor->AccelerationInput_Implementation(Type);
-        }
-    }
+    uint32 BitData;
+    FMemory::Memcpy(&BitData, &rx_data, sizeof(BitData));
+    return BitData;
 }
 
-void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
+FString AArduinoBLEInputParser::GetRFIDInput(const SimpleBLE::ByteArray& rx_data)
 {
-    uint32 BitData = GetButtonsSoundInput(rx_data);
-    TArray<AActor*> ArduinoInputReceiverActorArray;
-    UGameplayStatics::GetAllActorsWithInterface(GetWorld(), UArduinoBLEInputInterface::StaticClass(), ArduinoInputReceiverActorArray);
-    for (int i = 0; i < 6; i++)
-    {
-        if (!(BitData | 1 << i)) continue;
-
-        void (IArduinoBLEInputInterface:: * func)(void) = nullptr;
-        switch (i)
-        {
-        case 1:
-            func = &IArduinoBLEInputInterface::Button1Input_Implementation;
-            break;
-        case 2:
-            func = &IArduinoBLEInputInterface::Button2Input_Implementation;
-            break;
-        case 3:
-            func = &IArduinoBLEInputInterface::Button3Input_Implementation;
-            break;
-        case 4:
-            func = &IArduinoBLEInputInterface::Button4Input_Implementation;
-            break;
-        case 5:
-            func = &IArduinoBLEInputInterface::Button5Input_Implementation;
-            break;
-        case 6:
-            func = &IArduinoBLEInputInterface::SoundInput_Implementation;
-            break;
-        default:
-            break;
-        }
-        if (func == nullptr) continue;
-        for (auto actor : ArduinoInputReceiverActorArray)
-        {
-            TWeakInterfacePtr<IArduinoBLEInputInterface> ArduinoInputReceiverActor = Cast<IArduinoBLEInputInterface>(actor);
-            if (ArduinoInputReceiverActor.IsValid())
-            {
-                (ArduinoInputReceiverActor.Get()->*func)();
-            }
-        }
-    }
-}
-
-void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data)
-{
-    FString HexString = GetRFIDInput(rx_data);
-    TArray<AActor*> ArduinoInputReceiverActorArray;
-    UGameplayStatics::GetAllActorsWithInterface(GetWorld(), UArduinoBLEInputInterface::StaticClass(), ArduinoInputReceiverActorArray);
-    for (auto actor : ArduinoInputReceiverActorArray)
-    {
-        TWeakInterfacePtr<IArduinoBLEInputInterface> ArduinoInputReceiverActor = Cast<IArduinoBLEInputInterface>(actor);
-        if (ArduinoInputReceiverActor.IsValid())
-        {
-            ArduinoInputReceiverActor->RFIDInput_Implementation(HexString);
-        }
-    }
+    unsigned long Data;
+    FMemory::Memcpy(&Data, &rx_data, sizeof(unsigned long));
+    FString HexString = FString::Printf(TEXT("%08X"), Data);
+    return HexString;
 }
 
 TEnumAsByte<EMotionType> AArduinoBLEInputParser::GetAccelerationSensorInput(const SimpleBLE::ByteArray& rx_data)
@@ -106,11 +46,11 @@ TEnumAsByte<EMotionType> AArduinoBLEInputParser::GetAccelerationSensorInput(cons
     FVector OutputData;
     static_assert(sizeof(float) == sizeof(uint32_t), "Float and uint32_t size dont match. Check another int type");
     float BitData[3];  // three float
-    memcpy(BitData, &rx_data, sizeof(BitData));
+    FMemory::Memcpy(BitData, &rx_data, sizeof(BitData));
     for (int i = 0; i < 3; ++i)
     {
         float AccelerationData;
-        memcpy(&AccelerationData, BitData+i, sizeof(float));
+        FMemory::Memcpy(&AccelerationData, BitData + i, sizeof(float));
         OutputData[i] = AccelerationData;
     }
     TEnumAsByte<EMotionType> Type;
@@ -118,40 +58,82 @@ TEnumAsByte<EMotionType> AArduinoBLEInputParser::GetAccelerationSensorInput(cons
     return Type;
 }
 
-uint32 AArduinoBLEInputParser::GetButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
+void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data)
 {
-    uint32 BitData;
-    memcpy(&BitData, &rx_data, sizeof(BitData));
-    return BitData;
+    TEnumAsByte<EMotionType> Type = GetAccelerationSensorInput(rx_data);
+    auto ArduinoInputReceiverActorArray = ReceiveInputList;
+    for (auto actor : ArduinoInputReceiverActorArray)
+    {
+        if (!actor->Implements<UArduinoBLEInputInterface>())
+            continue;
+        IArduinoBLEInputInterface::Execute_AccelerationInput(actor, Type);
+    }
 }
 
-FString AArduinoBLEInputParser::GetRFIDInput(const SimpleBLE::ByteArray& rx_data)
+void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
 {
-    unsigned long Data;
-    memcpy(&Data, &rx_data, sizeof(unsigned long));
-    FString HexString = FString::Printf(TEXT("%08X"), Data);
-    return HexString;
+    uint32 BitData = GetButtonsSoundInput(rx_data);
+    auto ArduinoInputReceiverActorArray = ReceiveInputList;
+    for (int i = 0; i < 6; i++)
+    {
+        if (!(BitData | 1 << i)) continue;
+
+        void (* func)(UObject*) = nullptr;
+        switch (BitData | 1 << i)
+        {
+        case 1:
+            func = IArduinoBLEInputInterface::Execute_Button1Input;
+            break;
+        case 2:
+            func = IArduinoBLEInputInterface::Execute_Button2Input;
+            break;
+        case 3:
+            func = IArduinoBLEInputInterface::Execute_Button3Input;
+            break;
+        case 4:
+            func = IArduinoBLEInputInterface::Execute_Button4Input;
+            break;
+        case 5:
+            func = IArduinoBLEInputInterface::Execute_Button5Input;
+            break;
+        case 6:
+            func = IArduinoBLEInputInterface::Execute_SoundInput;
+            break;
+        default:
+            break;
+        }
+        if (func == nullptr) continue;
+        for (auto actor : ArduinoInputReceiverActorArray)
+        {
+            if (!actor->Implements<UArduinoBLEInputInterface>())
+                continue;
+            func(actor);
+        }
+    }
 }
 
-// Sets default values
-AArduinoBLEInputParser::AArduinoBLEInputParser()
+void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data)
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-    bIsConnected = false;
-    bIsReceivingRFIDInput = bIsReceivingButtonSoundInput = bIsReceivingAccelerationInput = false;
+    FString HexString = GetRFIDInput(rx_data);
+    auto ArduinoInputReceiverActorArray = ReceiveInputList;
+    for (auto actor : ArduinoInputReceiverActorArray)
+    {
+        if (!actor->Implements<UArduinoBLEInputInterface>())
+            continue;
+        IArduinoBLEInputInterface::Execute_RFIDInput(actor, HexString);
+    }
 }
 
-// Called when the game starts or when spawned
-void AArduinoBLEInputParser::BeginPlay()
+void AArduinoBLEInputParser::InitBluetooth()
 {
-	Super::BeginPlay();
     auto adapter_optional = GetAdapter();
     bool found_device = false;
 
-    if (!adapter_optional.has_value()) {
+    if (!adapter_optional.has_value()) 
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Failed to find Bluetooth Adapter!"));
         if (GEngine)
-            GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Can't find the Arduino!"));
+            GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Can't find the Bluetooth Adapter!"));
         return;
     }
 
@@ -166,8 +148,8 @@ void AArduinoBLEInputParser::BeginPlay()
             found_device = true;
         }});
 
-    adapter.set_callback_on_scan_start([]() { std::cout << "Scan started." << std::endl; });
-    adapter.set_callback_on_scan_stop([]() { std::cout << "Scan stopped." << std::endl; });
+    adapter.set_callback_on_scan_start([]() { UE_LOG(LogTemp, Log, TEXT("Scan started.")); });
+    adapter.set_callback_on_scan_stop([]() { UE_LOG(LogTemp, Log, TEXT("Scan stopped.")); });
     // Scan for 5 seconds and return.
     // TODO:: replace the 5000 to variable
     adapter.scan_for(5000);
@@ -175,9 +157,13 @@ void AArduinoBLEInputParser::BeginPlay()
     if (!found_device)
     {
         bIsConnected = false;
+        UE_LOG(LogTemp, Warning, TEXT("Failed to find Bluetooth!"));
+        if (GEngine)
+            GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Can't find the Arduino!"));
         return;
     }
     TargetPeripheral.connect();
+    UE_LOG(LogTemp, Log, TEXT("Connected to Arduino BLE."));
 
     // Store all service and characteristic uuids in a vector.
     TArray<TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID>> uuids;
@@ -219,12 +205,48 @@ void AArduinoBLEInputParser::BeginPlay()
         TargetPeripheral.notify(ButtonSoundUUID.Key, ButtonSoundUUID.Value, [&](SimpleBLE::ByteArray rx_data)
             {ProcessButtonsSoundInput(rx_data); });
     }
-    while (1);
+
+    UE_LOG(LogTemp, Log, TEXT("Finished Initializing Bluetooth."));
+
     //if (bIsReceivingAccelerationInput)
     // {
     //    target_peripheral.notify(AccelerationUUID.Key, AccelerationUUID.Value, [&](SimpleBLE::ByteArray rx_data)
     //        {ProcessAccelerationInput(rx_data); });
     // }
+}
+
+void AArduinoBLEInputParser::AddToReceiveInputList(AActor* SelfPointer)
+{
+    if (SelfPointer)
+        ReceiveInputList.Add(SelfPointer);
+}
+
+bool AArduinoBLEInputParser::RemoveFromReceiveInputList(AActor* SelfPointer)
+{
+    if (SelfPointer && ReceiveInputList.Contains(SelfPointer))
+    {
+        ReceiveInputList.Remove(SelfPointer);
+        return true;
+    }
+    return false;
+}
+
+// Sets default values
+AArduinoBLEInputParser::AArduinoBLEInputParser()
+{
+ 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+	PrimaryActorTick.bCanEverTick = true;
+    bIsConnected = false;
+    bIsReceivingRFIDInput = bIsReceivingButtonSoundInput = bIsReceivingAccelerationInput = false;
+}
+
+// Called when the game starts or when spawned
+void AArduinoBLEInputParser::BeginPlay()
+{
+	Super::BeginPlay();
+    AsyncTask(ENamedThreads::AnyNormalThreadNormalTask, [this]() {
+        this->InitBluetooth();
+        });
 }
 
 void AArduinoBLEInputParser::Destroyed()
@@ -244,4 +266,3 @@ void AArduinoBLEInputParser::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
 }
-

@@ -17,6 +17,10 @@ class VOODOOMANAGEMENT_API AArduinoBLEInputParser : public AActor
 public:	
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsConnected;
+
+	UPROPERTY(BlueprintReadOnly)
+		TSet<AActor*> ReceiveInputList;
+
 private:
 	const FString FNano33Mac = "15:5b:49:e7:17:27";
 	const FString FAccelerationCharacteristicUUID = "ba118772-c36d-494a-a8e0-c0cc9f569b89";
@@ -26,11 +30,20 @@ private:
 	SimpleBLE::Peripheral TargetPeripheral;
 	bool bIsReceivingRFIDInput, bIsReceivingButtonSoundInput, bIsReceivingAccelerationInput;
 	TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID> RfidUUID, ButtonSoundUUID, AccelerationUUID;
+
 public:	
 	// Sets default values for this actor's properties
 	AArduinoBLEInputParser();
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
+
+	// Add actor to the list to receive input
+	UFUNCTION(BlueprintCallable)
+		void AddToReceiveInputList(AActor* SelfPointer);
+
+	// Remove actor from the list
+	UFUNCTION(BlueprintCallable)
+		bool RemoveFromReceiveInputList(AActor* SelfPointer);
 
 protected:
 	// Called when the game starts or when spawned
@@ -46,4 +59,5 @@ private:
 	// Returns a bit array as uint32, repesent button1,2,3,4,5 and sound
 	uint32 GetButtonsSoundInput(const SimpleBLE::ByteArray& rx_data);
 	FString GetRFIDInput(const SimpleBLE::ByteArray& rx_data);
+	void InitBluetooth();
 };
