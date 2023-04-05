@@ -14,24 +14,24 @@ AArduinoBLEInputParser::AArduinoBLEInputParser()
     ConfigFileName = "Config.json";
 }
 
-TOptional<SimpleBLE::Adapter> AArduinoBLEInputParser::GetAdapter()
+TOptional<SimpleBLE::Safe::Adapter> AArduinoBLEInputParser::GetAdapter()
 {
-    if (!SimpleBLE::Adapter::bluetooth_enabled()) 
+    if (!SimpleBLE::Safe::Adapter::bluetooth_enabled()) 
     {
         UE_LOG(LogTemp, Warning, TEXT("Bluetooth is not enabled!"));
         return {};
     }
 
-    auto adapterList = SimpleBLE::Adapter::get_adapters();
+    auto adapterList = SimpleBLE::Safe::Adapter::get_adapters();
 
     // no adapter found
-    if (adapterList.empty()) 
+    if (adapterList->empty()) 
     {
         UE_LOG(LogTemp, Warning, TEXT("No adapter was found."));
         return {};
     }
-    auto adapter = adapterList.at(0);
-    UE_LOG(LogTemp, Log, TEXT("Using adapter: %s [%s]"), *FString(adapter.identifier().c_str()), *FString(adapter.address().c_str()));
+    auto adapter = adapterList->at(0);
+    UE_LOG(LogTemp, Log, TEXT("Using adapter: %s [%s]"), *FString(adapter.identifier().value().c_str()), *FString(adapter.address().value().c_str()));
     return adapter;
 }
 
@@ -153,9 +153,9 @@ void AArduinoBLEInputParser::InitBluetooth()
 
     auto adapter = adapter_optional.GetValue();
 
-    std::vector<SimpleBLE::Peripheral> peripherals;
+    std::vector<SimpleBLE::Safe::Peripheral> peripherals;
 
-    adapter.set_callback_on_scan_found([&](SimpleBLE::Peripheral peripheral) {
+    adapter.set_callback_on_scan_found([&](SimpleBLE::Safe::Peripheral peripheral) {
         if (peripheral.address() == TCHAR_TO_UTF8(*FNano33Mac)) {
             adapter.scan_stop();
             TargetPeripheral = peripheral;
@@ -181,8 +181,11 @@ void AArduinoBLEInputParser::InitBluetooth()
 
     // Store all service and characteristic uuids in a vector.
     TArray<TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID>> uuids;
-    for (auto service : TargetPeripheral.services()) {
-        for (auto characteristic : service.characteristics()) {
+    auto Services = TargetPeripheral.services().value();
+    for (auto service : Services)
+    {
+        for (auto characteristic : service.characteristics()) 
+        {
             uuids.Add(TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID>(service.uuid(), characteristic.uuid()));
         }
     }
@@ -200,11 +203,11 @@ void AArduinoBLEInputParser::InitBluetooth()
             bIsReceivingButtonSoundInput = true;
             ButtonSoundUUID = uuids[i];
         }
-        if (uuids[i].Value == TCHAR_TO_UTF8(*FAccelerationCharacteristicUUID))
-        {
-            bIsReceivingAccelerationInput = true;
-            AccelerationUUID = uuids[i];
-        }
+        //if (uuids[i].Value == TCHAR_TO_UTF8(*FAccelerationCharacteristicUUID))
+        //{
+        //    bIsReceivingAccelerationInput = true;
+        //    AccelerationUUID = uuids[i];
+        //}
     }
 
     // Subscribe to the characteristic.

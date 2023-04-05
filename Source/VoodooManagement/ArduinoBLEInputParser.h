@@ -31,7 +31,7 @@ private:
 	const FString FRfidCharacteristicUUID = "9d6e6653-fe77-449d-a1c9-58061a811483";
 	const FString FButtonSoundCharacteristicUUID = "8cb974de-1f87-4f2f-9942-ac1d421fa34d";
 
-	SimpleBLE::Peripheral TargetPeripheral;
+	SimpleBLE::Safe::Peripheral TargetPeripheral;
 	bool bIsReceivingRFIDInput, bIsReceivingButtonSoundInput, bIsReceivingAccelerationInput;
 	TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID> RfidUUID, ButtonSoundUUID, AccelerationUUID;
 
@@ -55,7 +55,7 @@ protected:
 	virtual void Destroyed() override;
 
 private:
-	TOptional<SimpleBLE::Adapter> GetAdapter();
+	TOptional<SimpleBLE::Safe::Adapter> GetAdapter();
 	void ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data);
 	void ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data);
 	void ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data);
