@@ -82,7 +82,7 @@ union multi_sensor_data
 union multi_sensor_data sensor_data;
 
 BLEService testService( BLE_UUID_TEST_SERVICE );
-BLECharacteristic accelerationCharacteristic( BLE_UUID_ACCELERATION, BLERead | BLENotify, sizeof sensor_data.bytes);
+// BLECharacteristic accelerationCharacteristic( BLE_UUID_ACCELERATION, BLERead | BLENotify, sizeof sensor_data.bytes);
 BLECharacteristic rfidCharacteristic(BLE_UUID_RFID, BLERead| BLENotify, 4);
 BLEUnsignedIntCharacteristic buttonCharacteristic( BLE_UUID_BUTTON, BLERead | BLENotify );
 
@@ -284,12 +284,12 @@ void loop()
           }
 
           // Acceleration input
-          float accelerationX, accelerationY, accelerationZ;
-          if (IMU.accelerationAvailable())
-          {
-            IMU.readAcceleration( sensor_data.values[0], sensor_data.values[1], sensor_data.values[2] );
-            accelerationCharacteristic.writeValue( sensor_data.bytes, sizeof sensor_data.bytes);
-          }
+          // float accelerationX, accelerationY, accelerationZ;
+          // if (IMU.accelerationAvailable())
+          // {
+          //   IMU.readAcceleration( sensor_data.values[0], sensor_data.values[1], sensor_data.values[2] );
+          //   accelerationCharacteristic.writeValue( sensor_data.bytes, sizeof sensor_data.bytes);
+          // }
         }
       } // intervall
     } // while connected
@@ -314,7 +314,7 @@ bool setupBleMode()
   BLE.setAdvertisedService( testService );
 
   // BLE add characteristics
-  testService.addCharacteristic( accelerationCharacteristic );
+  //testService.addCharacteristic( accelerationCharacteristic );
   testService.addCharacteristic( buttonCharacteristic );
   testService.addCharacteristic(rfidCharacteristic);
 
@@ -326,7 +326,7 @@ bool setupBleMode()
   {
     sensor_data.values[i] = 0;
   }
-  accelerationCharacteristic.writeValue( sensor_data.bytes, sizeof sensor_data.bytes );
+  //accelerationCharacteristic.writeValue( sensor_data.bytes, sizeof sensor_data.bytes );
   rfidCharacteristic.writeValue((byte)0x0);
   buttonCharacteristic.writeValue( 0 );
 
