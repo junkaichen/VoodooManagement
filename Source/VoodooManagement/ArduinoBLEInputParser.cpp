@@ -244,7 +244,7 @@ bool AArduinoBLEInputParser::ReadJsonConfigFile()
     return true;
 }
 
-void AArduinoBLEInputParser::AddToReceiveObjectInputList(AActor* SelfPointer)
+void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 {
     if (SelfPointer)
         ReceiveInputObjectList.Add(SelfPointer);
