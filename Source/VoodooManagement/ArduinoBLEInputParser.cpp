@@ -85,27 +85,27 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
     auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     for (int i = 0; i < 6; i++)
     {
-        if (!(BitData | 1 << i)) continue;
+        if (!(BitData & 1 << i)) continue;
 
         void (* func)(UObject*) = nullptr;
-        switch (BitData | 1 << i)
+        switch (i)
         {
-        case 1:
+        case 0:
             func = IArduinoBLEInputInterface::Execute_Button1Input;
             break;
-        case 2:
+        case 1:
             func = IArduinoBLEInputInterface::Execute_Button2Input;
             break;
-        case 3:
+        case 2:
             func = IArduinoBLEInputInterface::Execute_Button3Input;
             break;
-        case 4:
+        case 3:
             func = IArduinoBLEInputInterface::Execute_Button4Input;
             break;
-        case 5:
+        case 4:
             func = IArduinoBLEInputInterface::Execute_Button5Input;
             break;
-        case 6:
+        case 5:
             func = IArduinoBLEInputInterface::Execute_SoundInput;
             break;
         default:
@@ -116,7 +116,9 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
         {
             if (!actor->Implements<UArduinoBLEInputInterface>())
                 continue;
-            func(actor);
+            AsyncTask(ENamedThreads::GameThread, [func, actor]() {
+                func(actor);
+                });
         }
     }
 }
@@ -130,7 +132,9 @@ void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_dat
         if (!actor->Implements<UArduinoBLEInputInterface>())
             continue;
         if (UIDToNameMap.Contains(HexString.ToUpper()))
+            AsyncTask(ENamedThreads::GameThread, [actor, HexString, this]() {
             IArduinoBLEInputInterface::Execute_RFIDInput(actor, UIDToNameMap[HexString]);
+                });
     }
 }
 
