@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "SimpleBLE.h"
+#include "Misc/Optional.h"
 #include "ArduinoBLEInputParser.generated.h"
 
 enum EMotionType;
@@ -19,8 +20,11 @@ public:
 	bool bIsConnected;
 
 	UPROPERTY(BlueprintReadOnly)
-		TSet<AActor*> ReceiveInputList;
-
+		TSet<AActor*> ReceiveInputObjectList;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FString ConfigFileName;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	TMap<FString, FString> UIDToNameMap;
 private:
 	const FString FNano33Mac = "15:5b:49:e7:17:27";
 	const FString FAccelerationCharacteristicUUID = "ba118772-c36d-494a-a8e0-c0cc9f569b89";
@@ -39,11 +43,11 @@ public:
 
 	// Add actor to the list to receive input
 	UFUNCTION(BlueprintCallable)
-		void AddToReceiveInputList(AActor* SelfPointer);
+		void AddToReceiveObjectInputList(AActor* SelfPointer);
 
 	// Remove actor from the list
 	UFUNCTION(BlueprintCallable)
-		bool RemoveFromReceiveInputList(AActor* SelfPointer);
+		bool RemoveFromReceiveObjectInputList(AActor* SelfPointer);
 
 protected:
 	// Called when the game starts or when spawned
@@ -51,7 +55,7 @@ protected:
 	virtual void Destroyed() override;
 
 private:
-	std::optional<SimpleBLE::Adapter> GetAdapter();
+	TOptional<SimpleBLE::Adapter> GetAdapter();
 	void ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data);
 	void ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data);
 	void ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data);
@@ -60,4 +64,5 @@ private:
 	uint32 GetButtonsSoundInput(const SimpleBLE::ByteArray& rx_data);
 	FString GetRFIDInput(const SimpleBLE::ByteArray& rx_data);
 	void InitBluetooth();
+	bool ReadJsonConfigFile();
 };

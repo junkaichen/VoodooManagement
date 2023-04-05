@@ -1,11 +1,20 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 #include "ArduinoBLEInputParser.h"
-#include <optional>
 #include "UObject/WeakInterfacePtr.h"
 #include "Kismet/GameplayStatics.h"
 #include "ArduinoBLEInputInterface.h"
 
-std::optional<SimpleBLE::Adapter> AArduinoBLEInputParser::GetAdapter()
+// Sets default values
+AArduinoBLEInputParser::AArduinoBLEInputParser()
+{
+    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = true;
+    bIsConnected = false;
+    bIsReceivingRFIDInput = bIsReceivingButtonSoundInput = bIsReceivingAccelerationInput = false;
+    ConfigFileName = "Config.json";
+}
+
+TOptional<SimpleBLE::Adapter> AArduinoBLEInputParser::GetAdapter()
 {
     if (!SimpleBLE::Adapter::bluetooth_enabled()) 
     {
@@ -61,7 +70,7 @@ TEnumAsByte<EMotionType> AArduinoBLEInputParser::GetAccelerationSensorInput(cons
 void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data)
 {
     TEnumAsByte<EMotionType> Type = GetAccelerationSensorInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputList;
+    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     for (auto actor : ArduinoInputReceiverActorArray)
     {
         if (!actor->Implements<UArduinoBLEInputInterface>())
@@ -73,7 +82,7 @@ void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray
 void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
 {
     uint32 BitData = GetButtonsSoundInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputList;
+    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     for (int i = 0; i < 6; i++)
     {
         if (!(BitData | 1 << i)) continue;
@@ -115,12 +124,13 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
 void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data)
 {
     FString HexString = GetRFIDInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputList;
+    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     for (auto actor : ArduinoInputReceiverActorArray)
     {
         if (!actor->Implements<UArduinoBLEInputInterface>())
             continue;
-        IArduinoBLEInputInterface::Execute_RFIDInput(actor, HexString);
+        if (UIDToNameMap.Contains(HexString.ToUpper()))
+            IArduinoBLEInputInterface::Execute_RFIDInput(actor, UIDToNameMap[HexString]);
     }
 }
 
@@ -129,7 +139,7 @@ void AArduinoBLEInputParser::InitBluetooth()
     auto adapter_optional = GetAdapter();
     bool found_device = false;
 
-    if (!adapter_optional.has_value()) 
+    if (!adapter_optional.IsSet())
     {
         UE_LOG(LogTemp, Warning, TEXT("Failed to find Bluetooth Adapter!"));
         if (GEngine)
@@ -137,7 +147,7 @@ void AArduinoBLEInputParser::InitBluetooth()
         return;
     }
 
-    auto adapter = adapter_optional.value();
+    auto adapter = adapter_optional.GetValue();
 
     std::vector<SimpleBLE::Peripheral> peripherals;
 
@@ -215,35 +225,46 @@ void AArduinoBLEInputParser::InitBluetooth()
     // }
 }
 
-void AArduinoBLEInputParser::AddToReceiveInputList(AActor* SelfPointer)
+bool AArduinoBLEInputParser::ReadJsonConfigFile()
 {
-    if (SelfPointer)
-        ReceiveInputList.Add(SelfPointer);
+    FString ConfigFilePath = FPaths::ProjectConfigDir().Append(ConfigFileName);
+    if (!FPlatformFileManager::Get().GetPlatformFile().FileExists(*ConfigFilePath))
+        return false;
+
+    FString RawJson;
+    FFileHelper::LoadFileToString(RawJson, *ConfigFilePath);
+    TSharedRef<TJsonReader<>> JsonReader = TJsonReaderFactory<TCHAR>::Create(RawJson);
+    TSharedPtr<FJsonObject> JsonObject;
+    FJsonSerializer::Deserialize(JsonReader, JsonObject);
+    auto UIDToJsonMap = JsonObject->GetObjectField(TEXT("UID"))->Values;
+    for (auto UID : UIDToJsonMap)
+    {
+        UIDToNameMap.Add(UID.Key.ToUpper(), UID.Value->AsString());
+    }
+    return true;
 }
 
-bool AArduinoBLEInputParser::RemoveFromReceiveInputList(AActor* SelfPointer)
+void AArduinoBLEInputParser::AddToReceiveObjectInputList(AActor* SelfPointer)
 {
-    if (SelfPointer && ReceiveInputList.Contains(SelfPointer))
+    if (SelfPointer)
+        ReceiveInputObjectList.Add(SelfPointer);
+}
+
+bool AArduinoBLEInputParser::RemoveFromReceiveObjectInputList(AActor* SelfPointer)
+{
+    if (SelfPointer && ReceiveInputObjectList.Contains(SelfPointer))
     {
-        ReceiveInputList.Remove(SelfPointer);
+        ReceiveInputObjectList.Remove(SelfPointer);
         return true;
     }
     return false;
-}
-
-// Sets default values
-AArduinoBLEInputParser::AArduinoBLEInputParser()
-{
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
-    bIsConnected = false;
-    bIsReceivingRFIDInput = bIsReceivingButtonSoundInput = bIsReceivingAccelerationInput = false;
 }
 
 // Called when the game starts or when spawned
 void AArduinoBLEInputParser::BeginPlay()
 {
 	Super::BeginPlay();
+    ReadJsonConfigFile();
     AsyncTask(ENamedThreads::AnyNormalThreadNormalTask, [this]() {
         this->InitBluetooth();
         });
@@ -259,7 +280,7 @@ void AArduinoBLEInputParser::Destroyed()
          TargetPeripheral.unsubscribe(AccelerationUUID.Key, AccelerationUUID.Value);*/
     TargetPeripheral.disconnect();
 }
-
+ 
 // Called every frame
 void AArduinoBLEInputParser::Tick(float DeltaTime)
 {
