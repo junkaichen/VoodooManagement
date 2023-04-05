@@ -43,7 +43,7 @@ public:
 
 	// Add actor to the list to receive input
 	UFUNCTION(BlueprintCallable)
-		void AddToReceiveObjectInputList(AActor* SelfPointer);
+		void AddToReceiveInputObjectList(AActor* SelfPointer);
 
 	// Remove actor from the list
 	UFUNCTION(BlueprintCallable)
