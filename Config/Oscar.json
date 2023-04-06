@@ -1,11 +1,11 @@
 {
 	"port": 8,
 	"UID": {
-		"B732CA73": "Manager",
-		"10A84073": "HR",
-		"B73EC0E3": "EntryLevel",
-		"B70425E3": "Associate",
-		"38EFA85C": "Senior",
-		"B71CC5D3": "MidLevel"
+		"E32504B7": "Manager",
+		"73CA32B7": "HR",
+		"E3C03EB7": "EntryLevel",
+		"5CA8EF38": "Associate",
+		"D3C51CB7": "Senior",
+		"7340A810": "MidLevel"
 	}
 }
