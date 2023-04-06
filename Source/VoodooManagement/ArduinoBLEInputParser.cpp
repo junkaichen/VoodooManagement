@@ -70,9 +70,8 @@ TEnumAsByte<EMotionType> AArduinoBLEInputParser::GetAccelerationSensorInput(cons
 void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data)
 {
     TEnumAsByte<EMotionType> Type = GetAccelerationSensorInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     RemoveAllInvaildPointer();
-    for (auto actor : ArduinoInputReceiverActorArray)
+    for (auto actor : ReceiveInputObjectList)
     {
         if (actor && !actor->Implements<UArduinoBLEInputInterface>())
             continue;
@@ -83,7 +82,6 @@ void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray
 void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
 {
     uint32 BitData = GetButtonsSoundInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     for (int i = 0; i < 6; i++)
     {
         if (!(BitData & 1 << i)) continue;
@@ -114,7 +112,7 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
         }
         if (func == nullptr) continue;
         RemoveAllInvaildPointer();
-        for (auto actor : ArduinoInputReceiverActorArray)
+        for (auto actor : ReceiveInputObjectList)
         {
             if (actor && !actor->Implements<UArduinoBLEInputInterface>())
                 continue;
@@ -128,9 +126,8 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
 void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data)
 {
     FString HexString = GetRFIDInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     RemoveAllInvaildPointer();
-    for (auto actor : ArduinoInputReceiverActorArray)
+    for (auto actor : ReceiveInputObjectList)
     {
         if (actor && !actor->Implements<UArduinoBLEInputInterface>())
             continue;
