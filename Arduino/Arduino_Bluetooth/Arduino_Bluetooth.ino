@@ -24,7 +24,7 @@ MFRC522 rfid(SS_PIN, RST_PIN);
 void(* resetFunc) (void) = 0;
 
 // General Settings
-#define SOUND_LIMIT 8000
+#define SOUND_LIMIT 6000
 #define BUTTON_INTERVAL 150
 // int rightCounter = 0;
 // int leftCounter = 0;
@@ -138,7 +138,7 @@ void loop()
 {
   // listen for BLE peripherals to connect:
   BLEDevice central = BLE.central();
-
+  unsigned long lastRfidInput = 0;
   if ( central )
   {
     Serial.print( "Connected to central: " );
@@ -249,13 +249,16 @@ void loop()
               {
                 rfidInput = rfidInput<<8 | (unsigned long) rfid.uid.uidByte[i];
               }
-              // Serial.print(rfidInput, HEX);
-              rfidCharacteristic.writeValue(rfidInput);
 
-              // Serial.println();
               rfid.PICC_HaltA(); // halt PICC
-              //rfid.PCD_StopCrypto1(); // stop encryption on PCD
-              
+              rfid.PCD_StopCrypto1(); // stop encryption on PCD
+              if (lastRfidInput != rfidInput)
+              {
+                rfidCharacteristic.writeValue(rfidInput);
+                rfid.PCD_Reset();
+                rfid.PCD_Init();
+                lastRfidInput = rfidInput;
+              }
             }
           }
 
@@ -291,7 +294,7 @@ bool setupBleMode()
 
   // BLE add characteristics
   //testService.addCharacteristic( accelerationCharacteristic );
-  testService.addCharacteristic( buttonCharacteristic );
+  testService.addCharacteristic(buttonCharacteristic);
   testService.addCharacteristic(rfidCharacteristic);
   testService.addCharacteristic(resetCharacteristic);
 
