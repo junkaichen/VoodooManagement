@@ -65,4 +65,5 @@ private:
 	FString GetRFIDInput(const SimpleBLE::ByteArray& rx_data);
 	void InitBluetooth();
 	bool ReadJsonConfigFile();
+	void RemoveAllInvaildPointer();
 };

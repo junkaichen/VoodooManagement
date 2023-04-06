@@ -71,6 +71,7 @@ void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray
 {
     TEnumAsByte<EMotionType> Type = GetAccelerationSensorInput(rx_data);
     auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
+    RemoveAllInvaildPointer();
     for (auto actor : ArduinoInputReceiverActorArray)
     {
         if (actor && !actor->Implements<UArduinoBLEInputInterface>())
@@ -112,6 +113,7 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
             break;
         }
         if (func == nullptr) continue;
+        RemoveAllInvaildPointer();
         for (auto actor : ArduinoInputReceiverActorArray)
         {
             if (actor && !actor->Implements<UArduinoBLEInputInterface>())
@@ -127,6 +129,7 @@ void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_dat
 {
     FString HexString = GetRFIDInput(rx_data);
     auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
+    RemoveAllInvaildPointer();
     for (auto actor : ArduinoInputReceiverActorArray)
     {
         if (actor && !actor->Implements<UArduinoBLEInputInterface>())
@@ -251,6 +254,15 @@ bool AArduinoBLEInputParser::ReadJsonConfigFile()
     return true;
 }
 
+void AArduinoBLEInputParser::RemoveAllInvaildPointer()
+{
+    for (auto pointer : ReceiveInputObjectList)
+    {
+        if (!pointer)
+            ReceiveInputObjectList.Remove(pointer);
+    }
+}
+
 void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 {
     if (SelfPointer)
@@ -259,11 +271,7 @@ void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 
 bool AArduinoBLEInputParser::RemoveFromReceiveObjectInputList(AActor* SelfPointer)
 {
-    for (auto pointer : ReceiveInputObjectList)
-    {
-        if (!pointer)
-            ReceiveInputObjectList.Remove(pointer);
-    }
+    RemoveAllInvaildPointer();
     if (ReceiveInputObjectList.Contains(SelfPointer))
     {
         ReceiveInputObjectList.Remove(SelfPointer);
