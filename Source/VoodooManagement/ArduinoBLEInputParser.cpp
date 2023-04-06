@@ -73,7 +73,7 @@ void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray
     RemoveAllInvaildPointer();
     for (auto actor : ReceiveInputObjectList)
     {
-        if (actor && !actor->Implements<UArduinoBLEInputInterface>())
+        if (!actor || !actor->Implements<UArduinoBLEInputInterface>())
             continue;
         IArduinoBLEInputInterface::Execute_AccelerationInput(actor, Type);
     }
@@ -114,7 +114,7 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
         RemoveAllInvaildPointer();
         for (auto actor : ReceiveInputObjectList)
         {
-            if (actor && !actor->Implements<UArduinoBLEInputInterface>())
+            if (!actor || !actor->Implements<UArduinoBLEInputInterface>())
                 continue;
             AsyncTask(ENamedThreads::GameThread, [func, actor]() {
                 func(actor);
@@ -129,7 +129,7 @@ void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_dat
     RemoveAllInvaildPointer();
     for (auto actor : ReceiveInputObjectList)
     {
-        if (actor && !actor->Implements<UArduinoBLEInputInterface>())
+        if (!actor || !actor->Implements<UArduinoBLEInputInterface>())
             continue;
         if (UIDToNameMap.Contains(HexString.ToUpper()))
             AsyncTask(ENamedThreads::GameThread, [actor, HexString, this]() {
@@ -262,7 +262,7 @@ void AArduinoBLEInputParser::RemoveAllInvaildPointer()
 
 void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 {
-    if (SelfPointer)
+    if (SelfPointer && SelfPointer->Implements<UArduinoBLEInputInterface>())
         ReceiveInputObjectList.Add(SelfPointer);
 }
 
