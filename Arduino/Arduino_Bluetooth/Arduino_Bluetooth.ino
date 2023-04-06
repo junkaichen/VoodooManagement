@@ -21,9 +21,10 @@
 #define SOUND_INPUT 1<<5
 
 MFRC522 rfid(SS_PIN, RST_PIN);
+void(* resetFunc) (void) = 0;
 
 // General Settings
-#define SOUND_LIMIT 10000
+#define SOUND_LIMIT 8000
 #define BUTTON_INTERVAL 150
 // int rightCounter = 0;
 // int leftCounter = 0;
@@ -68,6 +69,7 @@ void onPDMdata()
 #define BLE_UUID_ACCELERATION               "ba118772-c36d-494a-a8e0-c0cc9f569b89"
 #define BLE_UUID_RFID                       "9d6e6653-fe77-449d-a1c9-58061a811483"
 #define BLE_UUID_BUTTON                     "8cb974de-1f87-4f2f-9942-ac1d421fa34d"
+#define BLE_UUID_RESET                      "5fbd9f9b-bcd3-4d02-a2f7-0acdab89e8f0"
 #define NUMBER_OF_SENSORS 3
 
 union multi_sensor_data
@@ -85,7 +87,7 @@ BLEService testService( BLE_UUID_TEST_SERVICE );
 // BLECharacteristic accelerationCharacteristic( BLE_UUID_ACCELERATION, BLERead | BLENotify, sizeof sensor_data.bytes);
 BLECharacteristic rfidCharacteristic(BLE_UUID_RFID, BLERead| BLENotify, 4);
 BLEUnsignedIntCharacteristic buttonCharacteristic( BLE_UUID_BUTTON, BLERead | BLENotify );
-
+BLEBoolCharacteristic resetCharacteristic(BLE_UUID_RESET, BLEWrite);
 void setup()
 {
   Serial.begin( 9600 );
@@ -144,6 +146,13 @@ void loop()
 
     while ( central.connected() )
     {
+      if (resetCharacteristic.written())      // reset Arduino
+      {
+        if (resetCharacteristic.value())
+          resetFunc();
+      }
+
+
       static long previousMillis = 0;
       unsigned int buttonSoundInput = 0;
 
@@ -153,9 +162,6 @@ void loop()
       {
         previousMillis = currentMillis;
 
-        // Serial.print( "Central RSSI: " );
-        // Serial.println( central.rssi() );
-
         if( central.rssi() != 0 )
         {
           button1Read = digitalRead(BUTTON1_PIN);
@@ -164,37 +170,6 @@ void loop()
           button4Read = digitalRead(BUTTON4_PIN);
           button5Read = digitalRead(BUTTON5_PIN);
 
-          // currentStateCLK = digitalRead(inputCLK);
-          // if(currentStateCLK != previousStateCLK)
-          // {
-          //     if(digitalRead(inputDT) != currentStateCLK)
-          //     {
-          //       rightCounter = 0;
-          //        if(leftCounter >= 1)
-          //       {
-          //         MyPrintln("RT 0");    // Left
-          //         leftCounter = 0;
-          //       }
-          //       else
-          //       {
-          //          leftCounter++;
-          //       }
-          //     }
-          //     else
-          //     {
-          //       leftCounter = 0;
-          //       if(rightCounter <= -1)
-          //       {
-          //         MyPrintln("RT 1");    // Right
-          //         rightCounter = 0;
-          //       }
-          //       else
-          //       {
-          //         rightCounter--;
-          //       }
-          //     }
-          // }
-          // previousStateCLK = currentStateCLK;
           if(button1Read == 0 && button1LastRead == 1)
           {
             if (currentMillis - buttonLastReleaseTime >= BUTTON_INTERVAL)
@@ -279,7 +254,8 @@ void loop()
 
               // Serial.println();
               rfid.PICC_HaltA(); // halt PICC
-              rfid.PCD_StopCrypto1(); // stop encryption on PCD
+              //rfid.PCD_StopCrypto1(); // stop encryption on PCD
+              
             }
           }
 
@@ -317,6 +293,7 @@ bool setupBleMode()
   //testService.addCharacteristic( accelerationCharacteristic );
   testService.addCharacteristic( buttonCharacteristic );
   testService.addCharacteristic(rfidCharacteristic);
+  testService.addCharacteristic(resetCharacteristic);
 
   // add service
   BLE.addService( testService );
@@ -329,7 +306,7 @@ bool setupBleMode()
   //accelerationCharacteristic.writeValue( sensor_data.bytes, sizeof sensor_data.bytes );
   rfidCharacteristic.writeValue((byte)0x0);
   buttonCharacteristic.writeValue( 0 );
-
+  resetCharacteristic.writeValue(false);
   // start advertising
   BLE.advertise();
 
