@@ -259,7 +259,12 @@ void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 
 bool AArduinoBLEInputParser::RemoveFromReceiveObjectInputList(AActor* SelfPointer)
 {
-    if (SelfPointer && ReceiveInputObjectList.Contains(SelfPointer))
+    for (auto pointer : ReceiveInputObjectList)
+    {
+        if (!pointer)
+            ReceiveInputObjectList.Remove(pointer);
+    }
+    if (ReceiveInputObjectList.Contains(SelfPointer))
     {
         ReceiveInputObjectList.Remove(SelfPointer);
         return true;
