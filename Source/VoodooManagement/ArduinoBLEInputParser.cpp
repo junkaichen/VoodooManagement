@@ -70,8 +70,8 @@ TEnumAsByte<EMotionType> AArduinoBLEInputParser::GetAccelerationSensorInput(cons
 void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray& rx_data)
 {
     TEnumAsByte<EMotionType> Type = GetAccelerationSensorInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
-    for (auto actor : ArduinoInputReceiverActorArray)
+    RemoveAllInvaildPointer();
+    for (auto actor : ReceiveInputObjectList)
     {
         if (actor && !actor->Implements<UArduinoBLEInputInterface>())
             continue;
@@ -82,7 +82,6 @@ void AArduinoBLEInputParser::ProcessAccelerationInput(const SimpleBLE::ByteArray
 void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray& rx_data)
 {
     uint32 BitData = GetButtonsSoundInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
     for (int i = 0; i < 6; i++)
     {
         if (!(BitData & 1 << i)) continue;
@@ -112,7 +111,8 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
             break;
         }
         if (func == nullptr) continue;
-        for (auto actor : ArduinoInputReceiverActorArray)
+        RemoveAllInvaildPointer();
+        for (auto actor : ReceiveInputObjectList)
         {
             if (actor && !actor->Implements<UArduinoBLEInputInterface>())
                 continue;
@@ -126,8 +126,8 @@ void AArduinoBLEInputParser::ProcessButtonsSoundInput(const SimpleBLE::ByteArray
 void AArduinoBLEInputParser::ProcessRFIDInput(const SimpleBLE::ByteArray& rx_data)
 {
     FString HexString = GetRFIDInput(rx_data);
-    auto ArduinoInputReceiverActorArray = ReceiveInputObjectList;
-    for (auto actor : ArduinoInputReceiverActorArray)
+    RemoveAllInvaildPointer();
+    for (auto actor : ReceiveInputObjectList)
     {
         if (actor && !actor->Implements<UArduinoBLEInputInterface>())
             continue;
@@ -251,6 +251,15 @@ bool AArduinoBLEInputParser::ReadJsonConfigFile()
     return true;
 }
 
+void AArduinoBLEInputParser::RemoveAllInvaildPointer()
+{
+    for (auto pointer : ReceiveInputObjectList)
+    {
+        if (!pointer)
+            ReceiveInputObjectList.Remove(pointer);
+    }
+}
+
 void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 {
     if (SelfPointer)
@@ -259,11 +268,7 @@ void AArduinoBLEInputParser::AddToReceiveInputObjectList(AActor* SelfPointer)
 
 bool AArduinoBLEInputParser::RemoveFromReceiveObjectInputList(AActor* SelfPointer)
 {
-    for (auto pointer : ReceiveInputObjectList)
-    {
-        if (!pointer)
-            ReceiveInputObjectList.Remove(pointer);
-    }
+    RemoveAllInvaildPointer();
     if (ReceiveInputObjectList.Contains(SelfPointer))
     {
         ReceiveInputObjectList.Remove(SelfPointer);
