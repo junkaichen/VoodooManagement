@@ -151,12 +151,14 @@ void AArduinoBLEInputParser::InitBluetooth()
         return;
     }
 
+    if (!adapter_optional.IsSet())
+        return;
     auto adapter = adapter_optional.GetValue();
 
     std::vector<SimpleBLE::Safe::Peripheral> peripherals;
 
     adapter.set_callback_on_scan_found([&](SimpleBLE::Safe::Peripheral peripheral) {
-        if (peripheral.address() == TCHAR_TO_UTF8(*FNano33Mac)) {
+        if (peripheral.is_connectable() && peripheral.address() == TCHAR_TO_UTF8(*FNano33Mac)) {
             adapter.scan_stop();
             TargetPeripheral = peripheral;
             found_device = true;
