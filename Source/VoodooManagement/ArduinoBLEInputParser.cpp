@@ -10,7 +10,7 @@ AArduinoBLEInputParser::AArduinoBLEInputParser()
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = true;
     bIsConnected = false;
-    bIsReceivingRFIDInput = bIsReceivingButtonSoundInput = bIsReceivingAccelerationInput = false;
+    bIsReceivingRFIDInput = bIsReceivingButtonSoundInput = bIsReceivingAccelerationInput = bHasFoundMotorService =  false;
     ConfigFileName = "Config.json";
 }
 
@@ -151,8 +151,6 @@ void AArduinoBLEInputParser::InitBluetooth()
         return;
     }
 
-    if (!adapter_optional.IsSet())
-        return;
     auto adapter = adapter_optional.GetValue();
 
     std::vector<SimpleBLE::Safe::Peripheral> peripherals;
@@ -168,17 +166,20 @@ void AArduinoBLEInputParser::InitBluetooth()
     adapter.set_callback_on_scan_stop([]() { UE_LOG(LogTemp, Log, TEXT("Scan stopped.")); });
     // Scan for 5 seconds and return.
     // TODO:: replace the 5000 to variable
-    adapter.scan_for(5000);
-
-    if (!found_device)
+    while (!TargetPeripheral.is_connected())
     {
-        bIsConnected = false;
-        UE_LOG(LogTemp, Warning, TEXT("Failed to find Bluetooth!"));
-        if (GEngine)
-            GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Can't find the Arduino!"));
-        return;
+        adapter.scan_for(1000);
+
+        if (!found_device)
+        {
+            bIsConnected = false;
+            UE_LOG(LogTemp, Warning, TEXT("Failed to find Bluetooth!"));
+            if (GEngine)
+                GEngine->AddOnScreenDebugMessage(-1, 15.0f, FColor::Red, TEXT("Can't find the Arduino!"));
+            continue;
+        }
+        TargetPeripheral.connect();
     }
-    TargetPeripheral.connect();
     UE_LOG(LogTemp, Log, TEXT("Connected to Arduino BLE."));
 
     // Store all service and characteristic uuids in a vector.
@@ -195,15 +196,23 @@ void AArduinoBLEInputParser::InitBluetooth()
     // std::cout << "The following services and characteristics were found:" << std::endl;
     for (size_t i = 0; i < uuids.Num(); i++)
     {
-        if (uuids[i].Value == TCHAR_TO_UTF8(*FRfidCharacteristicUUID))
+        if (!bIsReceivingRFIDInput && uuids[i].Value == TCHAR_TO_UTF8(*FRfidCharacteristicUUID))
         {
             bIsReceivingRFIDInput = true;
             RfidUUID = uuids[i];
+            continue;
         }
-        if (uuids[i].Value == TCHAR_TO_UTF8(*FButtonSoundCharacteristicUUID))
+        if (!bIsReceivingButtonSoundInput && uuids[i].Value == TCHAR_TO_UTF8(*FButtonSoundCharacteristicUUID))
         {
             bIsReceivingButtonSoundInput = true;
             ButtonSoundUUID = uuids[i];
+            continue;
+        }
+        if (!bHasFoundMotorService && uuids[i].Value == TCHAR_TO_UTF8(*FMotorCharacteristicUUID))
+        {
+            bHasFoundMotorService = true;
+            MotorUUID = uuids[i];
+            continue;
         }
         //if (uuids[i].Value == TCHAR_TO_UTF8(*FAccelerationCharacteristicUUID))
         //{
@@ -224,7 +233,7 @@ void AArduinoBLEInputParser::InitBluetooth()
         TargetPeripheral.notify(ButtonSoundUUID.Key, ButtonSoundUUID.Value, [&](SimpleBLE::ByteArray rx_data)
             {ProcessButtonsSoundInput(rx_data); });
     }
-
+    bIsConnected = true;
     UE_LOG(LogTemp, Log, TEXT("Finished Initializing Bluetooth."));
 
     //if (bIsReceivingAccelerationInput)
@@ -277,6 +286,15 @@ bool AArduinoBLEInputParser::RemoveFromReceiveObjectInputList(AActor* SelfPointe
         return true;
     }
     return false;
+}
+
+void AArduinoBLEInputParser::MotorVibrate(int index)
+{
+    if (TargetPeripheral.is_connected())
+    {
+        std::string temp(1, index);
+        TargetPeripheral.write_request(MotorUUID.Key, MotorUUID.Value, temp);
+    }
 }
 
 // Called when the game starts or when spawned

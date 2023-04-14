@@ -8,11 +8,16 @@
 // Pin Settings
 #define SS_PIN D10
 #define RST_PIN D9
-#define BUTTON1_PIN D2
-#define BUTTON2_PIN D3
-#define BUTTON3_PIN D4
-#define BUTTON4_PIN D5
-#define BUTTON5_PIN D6
+#define BUTTON1_PIN A0
+#define BUTTON2_PIN A1
+#define BUTTON3_PIN A2
+#define BUTTON4_PIN A3
+#define BUTTON5_PIN A4
+#define MOTRO1_PIN D2
+#define MOTRO2_PIN D3
+#define MOTRO3_PIN D4
+#define MOTRO4_PIN D5
+#define MOTRO5_PIN D6
 #define BUTTON1_INPUT 1
 #define BUTTON2_INPUT 1<<1
 #define BUTTON3_INPUT 1<<2
@@ -20,8 +25,9 @@
 #define BUTTON5_INPUT 1<<4
 #define SOUND_INPUT 1<<5
 
+#define VIBRATION_TIME 500
+
 MFRC522 rfid(SS_PIN, RST_PIN);
-void(* resetFunc) (void) = 0;
 
 // General Settings
 #define SOUND_LIMIT 6000
@@ -40,8 +46,9 @@ int button3Read, button3LastRead;
 int button4Read, button4LastRead;
 int button5Read, button5LastRead;
 unsigned long buttonLastReleaseTime = 0;
-bool hasOutPutted;
 
+unsigned long motorStartingMillis[5];
+// the time of motors start vibrating
 
 // buffer to read samples into, each sample is 16-bits
 short sampleBuffer[256];
@@ -61,6 +68,24 @@ void onPDMdata()
   samplesRead = bytesAvailable / 2;
 }
 
+uint8_t GetMotorPin(unsigned short index)
+{
+  switch(index)
+  {
+    case 0:
+      return MOTRO1_PIN;
+    case 1:
+      return MOTRO2_PIN;
+    case 2:
+      return MOTRO3_PIN;
+    case 3:
+      return MOTRO4_PIN;
+    case 4:
+      return MOTRO5_PIN;
+  }
+  return 0;
+}
+
 //----------------------------------------------------------------------------------------------------------------------
 // BLE
 //----------------------------------------------------------------------------------------------------------------------
@@ -69,7 +94,7 @@ void onPDMdata()
 #define BLE_UUID_ACCELERATION               "ba118772-c36d-494a-a8e0-c0cc9f569b89"
 #define BLE_UUID_RFID                       "9d6e6653-fe77-449d-a1c9-58061a811483"
 #define BLE_UUID_BUTTON                     "8cb974de-1f87-4f2f-9942-ac1d421fa34d"
-#define BLE_UUID_RESET                      "5fbd9f9b-bcd3-4d02-a2f7-0acdab89e8f0"
+#define BLE_UUID_MOTOR                      "5fbd9f9b-bcd3-4d02-a2f7-0acdab89e8f0"
 #define NUMBER_OF_SENSORS 3
 
 union multi_sensor_data
@@ -87,7 +112,7 @@ BLEService testService( BLE_UUID_TEST_SERVICE );
 // BLECharacteristic accelerationCharacteristic( BLE_UUID_ACCELERATION, BLERead | BLENotify, sizeof sensor_data.bytes);
 BLECharacteristic rfidCharacteristic(BLE_UUID_RFID, BLERead| BLENotify, 4);
 BLEUnsignedIntCharacteristic buttonCharacteristic( BLE_UUID_BUTTON, BLERead | BLENotify );
-BLEBoolCharacteristic resetCharacteristic(BLE_UUID_RESET, BLEWrite);
+BLEUnsignedShortCharacteristic motorCharacteristic(BLE_UUID_MOTOR, BLEWrite);
 void setup()
 {
   Serial.begin( 9600 );
@@ -130,6 +155,14 @@ void setup()
   button4LastRead = 1;
   button5LastRead = 1;
 
+  for (unsigned int i=0;i<5;++i)
+    motorStartingMillis[i] = 0;
+
+  pinMode(MOTRO1_PIN, OUTPUT);
+  pinMode(MOTRO2_PIN, OUTPUT);
+  pinMode(MOTRO3_PIN, OUTPUT);
+  pinMode(MOTRO4_PIN, OUTPUT);
+  pinMode(MOTRO5_PIN, OUTPUT);
   Serial.println("OK");
 }
 
@@ -146,12 +179,34 @@ void loop()
 
     while ( central.connected() )
     {
-      if (resetCharacteristic.written())      // reset Arduino
+      if (motorCharacteristic.written())      // vibirate motor controller
       {
-        if (resetCharacteristic.value())
-          resetFunc();
+        unsigned short index = motorCharacteristic.value();
+        motorStartingMillis[index] = millis();
+
+        uint8_t motorPin = GetMotorPin(index);
+        if (motorPin!=0)
+        {
+          digitalWrite(motorPin, HIGH);
+          Serial.println(index);
+        }
       }
 
+      for (unsigned int i=0;i<5;++i)
+      {
+        if (motorStartingMillis[i] == 0)
+          continue;
+        if (millis() - motorStartingMillis[i] > VIBRATION_TIME)
+        {
+          motorStartingMillis[i] = 0;
+          uint8_t motorPin = GetMotorPin(i);
+          if (motorPin!=0)
+          {
+            digitalWrite(motorPin, LOW);
+            Serial.println(i);
+          }
+        }
+      }
 
       static long previousMillis = 0;
       unsigned int buttonSoundInput = 0;
@@ -296,7 +351,7 @@ bool setupBleMode()
   //testService.addCharacteristic( accelerationCharacteristic );
   testService.addCharacteristic(buttonCharacteristic);
   testService.addCharacteristic(rfidCharacteristic);
-  testService.addCharacteristic(resetCharacteristic);
+  testService.addCharacteristic(motorCharacteristic);
 
   // add service
   BLE.addService( testService );
@@ -308,8 +363,8 @@ bool setupBleMode()
   }
   //accelerationCharacteristic.writeValue( sensor_data.bytes, sizeof sensor_data.bytes );
   rfidCharacteristic.writeValue((byte)0x0);
-  buttonCharacteristic.writeValue( 0 );
-  resetCharacteristic.writeValue(false);
+  buttonCharacteristic.writeValue(0);
+  motorCharacteristic.writeValue(0);
   // start advertising
   BLE.advertise();
 

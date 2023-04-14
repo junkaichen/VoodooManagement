@@ -30,10 +30,11 @@ private:
 	const FString FAccelerationCharacteristicUUID = "ba118772-c36d-494a-a8e0-c0cc9f569b89";
 	const FString FRfidCharacteristicUUID = "9d6e6653-fe77-449d-a1c9-58061a811483";
 	const FString FButtonSoundCharacteristicUUID = "8cb974de-1f87-4f2f-9942-ac1d421fa34d";
+	const FString FMotorCharacteristicUUID = "5fbd9f9b-bcd3-4d02-a2f7-0acdab89e8f0";
 
 	SimpleBLE::Safe::Peripheral TargetPeripheral;
-	bool bIsReceivingRFIDInput, bIsReceivingButtonSoundInput, bIsReceivingAccelerationInput;
-	TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID> RfidUUID, ButtonSoundUUID, AccelerationUUID;
+	bool bIsReceivingRFIDInput, bIsReceivingButtonSoundInput, bIsReceivingAccelerationInput, bHasFoundMotorService;
+	TPair<SimpleBLE::BluetoothUUID, SimpleBLE::BluetoothUUID> RfidUUID, ButtonSoundUUID, AccelerationUUID, MotorUUID;
 
 public:	
 	// Sets default values for this actor's properties
@@ -49,6 +50,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 		bool RemoveFromReceiveObjectInputList(AActor* SelfPointer);
 
+	UFUNCTION(BlueprintCallable)
+		void MotorVibrate(int index);
 protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
