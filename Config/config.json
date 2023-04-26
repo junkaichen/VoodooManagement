@@ -2,10 +2,11 @@
 	"port": 8,
 	"UID": {
 		"012E4503": "Manager",
-		"73CA32B7": "HR",
+		"014C4503": "HR",
 		"01950503": "EntryLevel",
 		"01A74503": "Associate",
-		"D3C51CB7": "Senior",
-		"7340A810": "MidLevel"
-	}
+		"01164B03": "Senior",
+		"01FB4B03": "MidLevel"
+	},
+	"Vibration": false
 }

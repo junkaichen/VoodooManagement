@@ -19,6 +19,8 @@ public:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly)
 	bool bIsConnected;
 
+	bool bIsVibrationTurnedOn;
+
 	UPROPERTY(BlueprintReadOnly)
 		TSet<AActor*> ReceiveInputObjectList;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)

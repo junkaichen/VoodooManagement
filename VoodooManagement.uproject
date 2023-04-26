@@ -22,10 +22,6 @@
 			]
 		},
 		{
-			"Name": "SERIALCOM",
-			"Enabled": true
-		},
-		{
 			"Name": "JsonBlueprintUtilities",
 			"Enabled": true
 		}

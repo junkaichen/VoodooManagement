@@ -234,6 +234,8 @@ void AArduinoBLEInputParser::InitBluetooth()
             {ProcessButtonsSoundInput(rx_data); });
     }
     bIsConnected = true;
+	if (GEngine)
+        GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Arduino BLE Connected!"));
     UE_LOG(LogTemp, Log, TEXT("Finished Initializing Bluetooth."));
 
     //if (bIsReceivingAccelerationInput)
@@ -255,6 +257,7 @@ bool AArduinoBLEInputParser::ReadJsonConfigFile()
     TSharedPtr<FJsonObject> JsonObject;
     FJsonSerializer::Deserialize(JsonReader, JsonObject);
     auto UIDToJsonMap = JsonObject->GetObjectField(TEXT("UID"))->Values;
+    bIsVibrationTurnedOn = JsonObject->GetBoolField(TEXT("Vibration"));
     for (auto UID : UIDToJsonMap)
     {
         UIDToNameMap.Add(UID.Key.ToUpper(), UID.Value->AsString());
@@ -290,7 +293,7 @@ bool AArduinoBLEInputParser::RemoveFromReceiveObjectInputList(AActor* SelfPointe
 
 void AArduinoBLEInputParser::MotorVibrate(int index)
 {
-    if (TargetPeripheral.is_connected())
+    if (bIsVibrationTurnedOn && TargetPeripheral.is_connected())
     {
         std::string temp(1, index);
         TargetPeripheral.write_request(MotorUUID.Key, MotorUUID.Value, temp);
